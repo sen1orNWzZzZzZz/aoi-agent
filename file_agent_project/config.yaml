@@ -1,0 +1,9 @@
+app:
+    workspace_root: D:/AAAAA-sen1orN/project/agentDemo/file_agent_project
+    max_loop: 12
+    max_file_chars: 12000
+
+model:
+  base_url: https://api.deepseek.com
+  model_name: deepseek-chat
+  api_key: sk-508fbafdfe8548d5b8d3e11cfa161233
