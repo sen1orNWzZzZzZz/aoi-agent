@@ -100,7 +100,7 @@ def run_turn(user_input, history, state: AgentState):
                 resume_calling = f"已获得用户输入，当前工作流为workflow_type:{state.resume_context['workflow_type']};当前缺失信息为{state.resume_context['missing_info']};当前用户输入为：{user_input}"
                 action = get_model_action(resume_calling, history,state)
                 add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
-                                                         event_type=action.action_type,
+                                                         event_type="ask_user",
                                                          message=action.message,
                                                          workflow_type=state.workflow_type,
                                                          source="model",
@@ -114,7 +114,7 @@ def run_turn(user_input, history, state: AgentState):
                 if "summary" in state.workflow_type:
                     action = get_model_action(user_input="工作流完成，开始总结", history=history, state=state)
                     add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id,
-                                                              event_type=action.action_type,
+                                                              event_type="summary_files",
                                                               message=action.message,
                                                               workflow_type=state.workflow_type,
                                                               source="model",
@@ -123,7 +123,7 @@ def run_turn(user_input, history, state: AgentState):
                     action = get_model_action(user_input=user_input, history=history, state=state)
                     add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
                                                              event_type=action.action_type,
-                                                             message=action.message,
+                                                             message=action.message+"\n"+"tool_name:"+action.tool_name+"\ntool_args:"+str(action.tool_args),
                                                              workflow_type=state.workflow_type,
                                                              source="model",
                                                              session_id=state.session_id))
@@ -155,6 +155,13 @@ def run_turn(user_input, history, state: AgentState):
                 add_message(history, "assistant", action.message)
 
             if action.tool_name == "list_files":
+                if action.tool_args.get("file_names"):
+                    state.pending_files = list(action.tool_args.get("file_names",[]))#初始化一个新的列表这样可以不依赖别的对象
+                    state.collected_contents = {}
+                    state.completed_files=[]
+                    state.current_file=""
+                    state.workflow_type=action.task_type
+                    continue
                 tool_result = list_files(target_dir=action.tool_args.get("target_dir", ""))
             elif action.tool_name == "read_file":
                 if action.tool_args.get("file_names"):
