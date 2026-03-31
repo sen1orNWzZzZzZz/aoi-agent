@@ -20,9 +20,10 @@ class AgentState:
     last_tool_name: str
     last_tool_result: ToolResult
     workflow_type: str
-    pending_files: list[str] = field(default_factory=list)
+    pending_files: list[str] = field(default_factory=list)  #给多文件队列用的
     completed_files: list[str] = field(default_factory=list)
     collected_contents: dict[str, str] = field(default_factory=dict)
+    resume_context: dict[str, str] = field(default_factory=dict)  #agent的上下文保存器
 
 
 @dataclass

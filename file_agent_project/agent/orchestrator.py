@@ -68,9 +68,7 @@ def run_turn(user_input, history, state: AgentState):
             add_message(history, "assistant", "超过最大循环次数，自动退出。")
             return "超过最大循环次数，自动退出。", history, state
 
-        if state.waiting_for_user:
-            state.waiting_for_user = False
-            state.missing_info = ""
+        
 
         
         if len(state.pending_files)!=0:
@@ -80,10 +78,18 @@ def run_turn(user_input, history, state: AgentState):
             else: 
                 state.retry_count=state.retry_count+1
         else : 
-            if "summary" in state.workflow_type:
-                action = get_model_action(user_input="工作流完成，开始总结", history=history, state=state)
-            else:    
-                action = get_model_action(user_input=user_input, history=history, state=state)
+            if state.waiting_for_user:#处理等待用户输入的情况,拼接上下文
+                resume_calling = f"已获得用户输入，当前工作流为workflow_type:{state.resume_context['workflow_type']};当前缺失信息为{state.resume_context['missing_info']};当前用户输入为：{user_input}"
+                action = get_model_action(resume_calling, history,state)
+                state.waiting_for_user = False
+                state.missing_info = ""
+                state.resume_context = {}
+            else:
+
+                if "summary" in state.workflow_type:
+                    action = get_model_action(user_input="工作流完成，开始总结", history=history, state=state)
+                else:    
+                    action = get_model_action(user_input=user_input, history=history, state=state)
             #state.workflow_type = action.task_type
             if action.action_type == "respond":
                 add_message(history, "assistant", action.message)
@@ -93,6 +99,7 @@ def run_turn(user_input, history, state: AgentState):
             if action.action_type == "ask_user":
                 state.waiting_for_user = True
                 state.missing_info = _infer_missing_info(state.workflow_type)
+                state.resume_context = {"workflow_type": state.workflow_type, "missing_info": state.missing_info}
                 add_message(history, "assistant", action.message)
                 return action.message, history, state
 

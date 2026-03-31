@@ -21,7 +21,8 @@ def create_initial_state():
         pending_files=[],
         completed_files=[],
         collected_contents={},
-        workflow_type="idle"
+        workflow_type="idle",
+        resume_context={}
     )
 
 

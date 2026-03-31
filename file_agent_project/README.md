@@ -7,8 +7,19 @@
 - 单文件读取
 - 单文件总结
 - 多文件总结
+- `ask_user` 之后的最小恢复能力
 
 这个项目的重点不是单纯调用大模型和工具，而是把模型能力放进一个可控的工程系统里。
+
+## 当前版本
+当前主版本可以理解为：
+- `v2`：最小 Workflow Agent
+- `v2.1`：在 `v2` 基础上补充最小 human-in-the-loop 恢复能力
+
+`v2.1` 的核心变化是：
+- 新增 `resume_context`
+- 当系统因信息不足进入 `ask_user` 时，会保存恢复上下文
+- 用户补充输入后，系统会尝试继续原 workflow，而不是把输入完全当作全新任务
 
 ## 项目目标
 这个版本重点验证下面几件事：
@@ -16,6 +27,7 @@
 - `history` 和 `state` 如何分层
 - 多文件任务如何从模型记忆转成程序控制
 - workflow 如何处理阶段推进、失败分流和最终总结
+- human-in-the-loop 场景下如何暂停并恢复原流程
 
 ## 核心设计
 系统采用“模型负责语义识别，程序负责流程控制”的分工：
@@ -27,6 +39,7 @@
 在这个设计里：
 - `task_type` 表示模型识别出的任务类型
 - `workflow_type` 表示程序当前实际处于哪个流程状态
+- `resume_context` 表示当任务被 `ask_user` 暂停后，用于恢复原 workflow 的上下文
 
 ## 核心数据结构
 - `Action`：模型输出的下一步动作
@@ -35,6 +48,7 @@
 - `state`：给程序控制流程的结构化上下文
 - `task_type`：模型识别出的任务类型
 - `workflow_type`：程序维护的流程状态
+- `resume_context`：等待用户补充后恢复 workflow 所需的上下文
 
 多文件 workflow 依赖下面几个关键字段：
 - `pending_files`
@@ -55,6 +69,19 @@
 4. 成功读取的结果写入 `collected_contents`。
 5. 当所有文件读取完成后，进入最终总结阶段。
 6. 最终总结以 `collected_contents` 为主数据源。
+
+## `v2.1` 恢复机制
+当系统因信息不足返回 `ask_user` 时：
+- 保留当前 `workflow_type`
+- 记录 `missing_info`
+- 将恢复上下文保存到 `resume_context`
+
+当用户补充输入回来时：
+- 系统优先按“补充输入”处理，而不是当作全新任务
+- orchestrator 会将 `resume_context + 用户补充输入` 组装成恢复提示
+- 再次调用模型，尝试继续原 workflow
+
+这个版本已经具备最小的“暂停 -> 补充 -> 恢复”能力，但恢复策略仍然较简化。
 
 ## 流程图
 ```mermaid
@@ -105,10 +132,12 @@ flowchart TD
 - 多文件总结
 - 基于 `task_type + workflow_type` 的最小 workflow 控制
 - 基于 state 的多文件任务队列推进
+- 基于 `resume_context` 的最小恢复能力
 
 ## 已知限制
-- `ask_user` 之后恢复原 workflow 的能力还不完整
-- 错误分类和恢复策略仍然较简化
+- `ask_user` 之后恢复原 workflow 的能力仍然是最小版，尚不够强壮
+- 当前错误分类和恢复策略仍然较简化
+- 还没有针对恢复链路的系统化测试
 - 当前主要是 CLI 版本，尚未服务化
 
 ## 下一步计划
