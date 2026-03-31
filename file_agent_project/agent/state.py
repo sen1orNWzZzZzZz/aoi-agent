@@ -22,7 +22,10 @@ def create_initial_state():
         completed_files=[],
         collected_contents={},
         workflow_type="idle",
-        resume_context={}
+        resume_context={},
+        turn_id=0,
+        session_id="",
+        trace_events=[]
     )
 
 

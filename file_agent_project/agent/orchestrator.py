@@ -4,12 +4,19 @@ from core.constants import MAX_LOOP
 from core.schemas import AgentState, ToolResult
 from tools.list_files import list_files
 from tools.read_file import read_file
+from agent.trace import TraceEvent,add_trace
 
 def _run_multi_file_step(history, state:AgentState):
     if len(state.pending_files)==0:
         return ToolResult("","",True, ""), history, state
     else:     
         state.current_file = state.pending_files[0]
+        add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
+                                                     message=f"orchestrator正在消费文件:{state.current_file}",
+                                                     workflow_type=state.workflow_type,
+                                                     source="orchestrator",
+                                                     session_id=state.session_id,
+                                                     event_type="queue_consume"))
         tool_result = read_file(state.current_file)
         if tool_result.success:
             state.collected_contents[state.current_file]=tool_result.content
@@ -18,6 +25,7 @@ def _run_multi_file_step(history, state:AgentState):
             state.last_tool_name = "read_file"
             state.last_tool_result = tool_result
             add_tool_result(history, "read_file", tool_result.content, tool_result.success)
+            
         else:
             state.last_tool_name = "read_file"
             state.last_tool_result = tool_result
@@ -55,8 +63,16 @@ def _build_tool_error(tool_name: str, message: str) -> ToolResult:
 
 
 def run_turn(user_input, history, state: AgentState):
+    state.turn_id= state.turn_id+1
     add_message(history, "user", user_input)
     #state.current_intent = _infer_intent(user_input)
+
+    add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id,
+                                                  event_type="turn_start",
+                                                  message="这轮对话开始",
+                                                  workflow_type=state.workflow_type,
+                                                  source="orchestrator",
+                                                  session_id=state.session_id))
 
     while True:
         if state.retry_count > 3:
@@ -69,10 +85,12 @@ def run_turn(user_input, history, state: AgentState):
             return "超过最大循环次数，自动退出。", history, state
 
         
+        
 
         
         if len(state.pending_files)!=0:
             multi_tool_result, history, state = _run_multi_file_step(history=history, state=state)
+            
             if multi_tool_result.success:
                 continue
             else: 
@@ -81,6 +99,13 @@ def run_turn(user_input, history, state: AgentState):
             if state.waiting_for_user:#处理等待用户输入的情况,拼接上下文
                 resume_calling = f"已获得用户输入，当前工作流为workflow_type:{state.resume_context['workflow_type']};当前缺失信息为{state.resume_context['missing_info']};当前用户输入为：{user_input}"
                 action = get_model_action(resume_calling, history,state)
+                add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
+                                                         event_type=action.action_type,
+                                                         message=action.message,
+                                                         workflow_type=state.workflow_type,
+                                                         source="model",
+                                                         session_id=state.session_id))
+                state.trace_events
                 state.waiting_for_user = False
                 state.missing_info = ""
                 state.resume_context = {}
@@ -88,8 +113,20 @@ def run_turn(user_input, history, state: AgentState):
 
                 if "summary" in state.workflow_type:
                     action = get_model_action(user_input="工作流完成，开始总结", history=history, state=state)
+                    add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id,
+                                                              event_type=action.action_type,
+                                                              message=action.message,
+                                                              workflow_type=state.workflow_type,
+                                                              source="model",
+                                                              session_id=state.session_id))
                 else:    
                     action = get_model_action(user_input=user_input, history=history, state=state)
+                    add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
+                                                             event_type=action.action_type,
+                                                             message=action.message,
+                                                             workflow_type=state.workflow_type,
+                                                             source="model",
+                                                             session_id=state.session_id))
             #state.workflow_type = action.task_type
             if action.action_type == "respond":
                 add_message(history, "assistant", action.message)

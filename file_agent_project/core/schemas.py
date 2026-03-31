@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass, field
+from agent.trace import TraceEvent
 
 
 @dataclass
@@ -20,10 +21,13 @@ class AgentState:
     last_tool_name: str
     last_tool_result: ToolResult
     workflow_type: str
+    session_id: str#日志
+    turn_id: int#rizhi
     pending_files: list[str] = field(default_factory=list)  #给多文件队列用的
     completed_files: list[str] = field(default_factory=list)
     collected_contents: dict[str, str] = field(default_factory=dict)
     resume_context: dict[str, str] = field(default_factory=dict)  #agent的上下文保存器
+    trace_events: list[TraceEvent] = field(default_factory=list)#是agent的输出trace相关字段
 
 
 @dataclass
