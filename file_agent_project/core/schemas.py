@@ -23,6 +23,7 @@ class AgentState:
     workflow_type: str
     session_id: str#日志
     turn_id: int#rizhi
+    current_file_retry_count: int #最近文件的重试次数
     pending_files: list[str] = field(default_factory=list)  #给多文件队列用的
     completed_files: list[str] = field(default_factory=list)
     collected_contents: dict[str, str] = field(default_factory=dict)
