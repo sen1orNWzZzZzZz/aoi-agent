@@ -1,6 +1,8 @@
 ﻿from core.path_utils import resolve_workspace_path, to_workspace_display
 from core.schemas import ToolResult
+from file_agent_project.tools.specs import ToolSpec
 
+list_files_spec = ToolSpec(name="list_files", required_fields=[], repair_slots={"target_dir":"tool_args.target_dir"}, default_user_messages={"target_dir":"请提供正确的文件夹路径名"})
 
 def list_files(target_dir: str = "") -> ToolResult:
     try:

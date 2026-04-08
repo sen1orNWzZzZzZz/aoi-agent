@@ -1,6 +1,9 @@
 ﻿from core.constants import MAX_FILE_CHARS
 from core.path_utils import resolve_workspace_path, to_workspace_display
 from core.schemas import ToolResult
+from file_agent_project.tools.specs import ToolSpec
+
+read_file_spec = ToolSpec(name="read_file", required_fields=["file_name"], repair_slots={"file_name":"tool_args.file_name"}, default_user_messages={"file_name":"请提供正确的文件路径名"})
 
 
 def read_file(file_name: str) -> ToolResult:
@@ -71,3 +74,4 @@ def read_file(file_name: str) -> ToolResult:
         success=True,
         error_message="",
     )
+

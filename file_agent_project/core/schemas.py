@@ -9,6 +9,24 @@ class ToolResult:
     success: bool
     error_message: str
 
+@dataclass
+class ResumeDecision:#恢复判定字段
+    resume_type: str
+    resolved_value: str
+    tool_name: str
+    message: str
+    tool_args: dict  = field(default_factory=dict)
+
+
+@dataclass
+class ResumeContext:#保存现场用字段
+    workflow_type: str
+    missing_info:str
+    resume_kind:str #分为
+    repair_target: str | None = None
+    pending_action: dict  | None = None
+
+
 
 @dataclass
 class AgentState:
@@ -24,10 +42,10 @@ class AgentState:
     session_id: str#日志
     turn_id: int#rizhi
     current_file_retry_count: int #最近文件的重试次数
+    resume_context: ResumeContext | None = None #agent的上下文保存器
     pending_files: list[str] = field(default_factory=list)  #给多文件队列用的
     completed_files: list[str] = field(default_factory=list)
     collected_contents: dict[str, str] = field(default_factory=dict)
-    resume_context: dict[str, str] = field(default_factory=dict)  #agent的上下文保存器
     trace_events: list[TraceEvent] = field(default_factory=list)#是agent的输出trace相关字段
 
 
@@ -35,7 +53,9 @@ class AgentState:
 class Action:
     action_type: str
     tool_name: str
-    tool_args: dict
     message: str
     finish_reason: str
-    task_type: str
+    task_type: str = ""
+    resume: ResumeDecision | None = None
+    tool_args: dict  = field(default_factory=dict)
+
