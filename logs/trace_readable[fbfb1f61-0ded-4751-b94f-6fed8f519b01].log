@@ -1,0 +1,96 @@
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:1
+[source]:orchestrator
+[eventType]:turn_start
+[workflowType]: idle 
+这轮对话开始
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:1
+[source]:model
+[eventType]:call_tool
+[workflowType]: idle 
+我将读取文件 '测试.md' 的内容，以便为您总结。
+tool_name:read_file
+tool_args:{'file_name': '测试.md'}
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:2
+[source]:orchestrator
+[eventType]:turn_start
+[workflowType]: idle 
+这轮对话开始
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:2
+[source]:model
+[eventType]:call_tool
+[workflowType]: idle 
+我需要先查看工作区中有哪些文件，以确认 'version_note' 和 '测试111' 文件是否存在。
+tool_name:list_files
+tool_args:{}
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:2
+[source]:model
+[eventType]:call_tool
+[workflowType]: idle 
+我将读取 'Version_Notes.md' 文件的内容。根据目录列表，没有找到 '测试111' 文件，只有 'Version_Notes.md' 文件。
+tool_name:read_file
+tool_args:{'file_names': ['Version_Notes.md']}
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:2
+[source]:orchestrator
+[eventType]:queue_consume
+[workflowType]: multi_file_summary 
+orchestrator正在消费文件:Version_Notes.md
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:2
+[source]:model
+[eventType]:finish
+[workflowType]: multi_file_summary 
+根据您的要求，我已经完成了对 'version_note' 文件的总结。文件 'Version_Notes.md' 记录了项目的版本演进：
+
+1. **v2 版本**：将最小文件 Agent 升级为最小 Workflow Agent，引入了任务类型和工作流类型的概念，支持单文件读取、单文件总结和多文件总结，通过队列推进机制实现多步任务执行能力。
+
+2. **v2.1 版本**：在 v2 基础上增加了最小 human-in-the-loop 恢复能力，通过保存恢复上下文使工作流能够在用户补充信息后恢复执行。
+
+3. **当前状态**：项目已具备最小 Agent 闭环、最小 Workflow Agent 和最小 human-in-the-loop 恢复能力，但仍需完善恢复策略、错误处理、测试和可观测性，以及服务化部署。
+
+关于您提到的 '测试111' 文件，在工作区中未找到该文件。如果您需要总结其他文件，请提供正确的文件名。
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:3
+[source]:orchestrator
+[eventType]:turn_start
+[workflowType]: idle 
+这轮对话开始
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:3
+[source]:model
+[eventType]:call_tool
+[workflowType]: idle 
+我将读取 README.md 文件的内容，以便为您总结。
+tool_name:read_file
+tool_args:{'file_name': 'README.md'}
+[sessionId]:fbfb1f61-0ded-4751-b94f-6fed8f519b01
+[turnId]:3
+[source]:model
+[eventType]:respond
+[workflowType]: single_file_summary 
+根据您的要求，我已经完成了对 README.md 文件的总结。该文件详细介绍了 File Workflow Agent 项目的核心设计和工作流程：
+
+**项目概述**：这是一个本地文件 Agent Demo，旨在验证如何将最小 Agent 闭环升级为带任务队列的 Workflow Agent，重点关注工程系统设计而非单纯模型训练。
+
+**核心特性**：
+1. 支持单文件读取、单文件总结、多文件总结
+2. 具备最小 human-in-the-loop 恢复能力
+3. 采用"模型负责语义识别，程序负责流程控制"的分工架构
+
+**版本演进**：
+- v2：最小 Workflow Agent，引入任务类型和工作流类型概念
+- v2.1：在 v2 基础上增加最小恢复能力，通过 resume_context 实现工作流暂停与恢复
+
+**工作流程设计**：
+- 支持三类工作流：single_file_read、single_file_summary、multi_file_summary
+- 多文件场景下通过 pending_files、completed_files、collected_contents 等状态字段实现队列推进
+- 采用流程图清晰展示系统执行逻辑
+
+**恢复机制**：当系统因信息不足返回 ask_user 时，会保存恢复上下文，用户补充输入后系统优先尝试继续原工作流。
+
+**当前状态**：项目已具备基本工作流控制能力，但仍需完善恢复策略、增加测试和可观测性，并计划提供 FastAPI 接口。
