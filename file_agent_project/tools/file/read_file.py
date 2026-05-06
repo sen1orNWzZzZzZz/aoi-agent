@@ -1,7 +1,8 @@
 ﻿from core.constants import MAX_FILE_CHARS
 from core.path_utils import resolve_workspace_path, to_workspace_display
 from core.schemas import ToolResult
-from file_agent_project.tools.specs import ToolSpec
+from tools.errors import ToolError,ToolErrorCode,PlatErrorCategory
+from tools.specs import FieldIssue,ToolSpec
 
 read_file_spec = ToolSpec(name="read_file", required_fields=["file_name"], repair_slots={"file_name":"tool_args.file_name"}, default_user_messages={"file_name":"请提供正确的文件路径名"})
 
@@ -13,6 +14,11 @@ def read_file(file_name: str) -> ToolResult:
             content="",
             success=False,
             error_message="缺少文件路径，需要用户补充明确的 file_name。",
+            error=ToolError(code=ToolErrorCode.TOOL_ARGUMENT_MISSING, 
+                                 category=PlatErrorCategory.USER_FIXABLE,
+                                 message=read_file_spec.default_user_messages["file_name"],
+                                 field_issues=[FieldIssue(field_name="file_name",target_path="tool_args.file_name",reason = "missing", required=True)],
+                                 )
         )
 
     try:

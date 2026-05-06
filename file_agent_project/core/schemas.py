@@ -1,6 +1,6 @@
 ﻿from dataclasses import dataclass, field
 from agent.trace import TraceEvent
-
+from tools.errors import ToolError
 
 @dataclass
 class ToolResult:
@@ -8,6 +8,7 @@ class ToolResult:
     content: str
     success: bool
     error_message: str
+    error: ToolError | None = None
 
 @dataclass
 class ResumeDecision:#恢复判定字段
@@ -22,9 +23,10 @@ class ResumeDecision:#恢复判定字段
 class ResumeContext:#保存现场用字段
     workflow_type: str
     missing_info:str
-    resume_kind:str #分为
+    resume_kind:str #分为action patch 和 workflow_repair
     repair_target: str | None = None
-    pending_action: dict  | None = None
+    pending_action:  dict = field(default_factory=dict)
+    resume_patch: dict | None = None #现场恢复字段
 
 
 

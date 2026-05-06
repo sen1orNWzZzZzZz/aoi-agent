@@ -10,6 +10,6 @@ class FieldIssue:
 @dataclass
 class ToolSpec:
     name: str
-    required_fields: list
-    repair_slots: dict
-    default_user_messages: dict
+    required_fields: list[str]
+    repair_slots: dict[str]
+    default_user_messages: dict[str]

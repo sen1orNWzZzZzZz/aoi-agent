@@ -1,5 +1,5 @@
 ﻿from core.schemas import AgentState
-from core.schemas import ToolResult
+from core.schemas import ToolResult, ResumeContext
 
 def set_default_state_workflow(state:AgentState):
     state.pending_files=[]
@@ -9,7 +9,7 @@ def set_default_state_workflow(state:AgentState):
     state.collected_contents={}
     state.waiting_for_user = False
     state.missing_info = ""
-    state.resume_context = {}
+    state.resume_context = None
     state.completed_files = []
     state.retry_count = 0
     return state
@@ -34,7 +34,7 @@ def create_initial_state():
         completed_files=[],
         collected_contents={},
         workflow_type="idle",
-        resume_context={},
+        resume_context=None,
         turn_id=0,
         session_id="",
         trace_events=[],
