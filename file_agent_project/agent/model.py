@@ -68,6 +68,7 @@ def get_model_action(user_input, history, state):
             model=model,
             messages=messages,
             stream=False,
+            timeout=15,
         )
     except Exception:
         return Action(

@@ -5,5 +5,5 @@ app:
 
 model:
   base_url: https://api.deepseek.com
-  model_name: deepseek-chat
-  api_key: sk-xxxx
+  model_name: deepseek-v4-flash
+  api_key: sk-508fbafdfe8548d5b8d3e11cfa161233
