@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass,field
-from tools.specs import FieldIssue
+from tool_layer.specs import FieldIssue
 
 class ToolErrorCode(Enum):
     TOOL_ARGUMENT_MISSING = "tool_argument_missing"# = "工具参数缺失"

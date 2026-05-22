@@ -6,6 +6,7 @@ from agent.memory import get_recent_memory
 from agent.prompt import SYSTEM_PROMPT
 from core.constants import api_key, base_url, model
 from core.schemas import Action
+from tool_layer.registry import registry
 
 def to_model_messages(memory):
     messages = []
@@ -46,22 +47,34 @@ def get_model_action(user_input, history, state):
     current_input = (
         f"用户输入: {user_input}\n"
         f"当前状态:\n"
-        f"current_intent: {state.current_intent}\n"
         f"current_file: {state.current_file}\n"
         f"missing_info: {state.missing_info}\n"
         f"waiting_for_user: {state.waiting_for_user}\n"
         f"loop_count: {state.loop_count}\n"
-        f"retry_count: {state.retry_count}\n"
-        f"last_tool_name: {state.last_tool_name}\n"
-        f"last_tool_result_success: {state.last_tool_result.success}\n"
-        f"last_tool_result: {state.last_tool_result.content}\n"
-        f"last_tool_error: {state.last_tool_result.error_message}\n"
         f"collected_file_read_result: {state.collected_contents}\n"
     )
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+    specs = registry.get_all_spec()   # ← 用实例调用
+    
+    #工具启动并且开始格式化成 LLM 能看懂的文本
+    tools_desc = []
+    for spec in specs:
+        tools_desc.append(
+            f"工具名：{spec.name}\n"
+            f"描述：{spec.description}\n"
+            f"参数：{spec.params}\n"
+            f"返回：{spec.returns}"
+        )
+    
+    tools_text = "\n---\n".join(tools_desc)
+
+    messages.append({"role":"system","content":"你有如下工具可供使用："+tools_text})
     messages.extend(to_model_messages(get_recent_memory(history, limit=6)))
     messages.append({"role": "user", "content": current_input})
+    
+    print(messages)
 
     try:
         response = client.chat.completions.create(

@@ -2,15 +2,12 @@
 from agent.model import get_model_action
 from core.constants import MAX_LOOP
 from core.schemas import AgentState, ToolResult,Action,ResumeContext,ToolError
-from tools.errors import PlatErrorCategory, ToolErrorCode
-from tools.file.list_files import list_files
-from tools.file.read_file import read_file
+from tool_layer.errors import PlatErrorCategory, ToolErrorCode
 from agent.trace import TraceEvent,add_trace
 from agent.state import set_default_state_workflow
 from recovery.recovery_decision import create_recovery_decision,RecoveryAction
 from common.dict.dict_consumer import get_nested_value,set_nested_value
-from tools.file.read_file_tool import ReadFileTool
-from tools.specs import ToolSpec, FieldIssue
+from tool_layer.specs import ToolSpec, FieldIssue
 from agent.decision import decide_next_step
 from execute.execute_layer import call_execute
 
@@ -70,48 +67,6 @@ def save_recovery_info(state, tool_name, resume_kind, recovery_decision):
       )
       return state, recovery_decision.user_message
 
-#统一获取工具相关内容
-def get_tool_action(tool_name:str)->str:
-    tool_table = {"read_file": ReadFileTool()}
-    if tool_name in tool_table.keys():
-        tool_obj = tool_table[tool_name]
-        return tool_obj.get_spec().repair_slots
-    else:
-        return "tool_not_found"
-    
-def get_tool_fields(tool_name:str)->str:
-    tool_table = {"read_file": ReadFileTool()}
-    if tool_name in tool_table.keys():
-        tool_obj = tool_table[tool_name]
-        return tool_obj.get_spec().required_fields
-    else:
-        return "tool_not_found"
-#统一工具调用方法
-def execute_tool_call(tool_name:str, tool_args:dict)->ToolResult:
-    #暂时用小的映射表搞一搞
-    #ToDo:完整的工具系统
-    tool_table = {"read_file": ReadFileTool()}
-    
-    if tool_name in tool_table.keys():
-        tool_obj = tool_table[tool_name]
-        missing_field = False
-        for field in tool_obj.get_spec().required_fields:
-            if field not in tool_args.keys():
-                missing_field = True
-                break
-        if missing_field:
-            return ToolResult(tool_name=tool_name,
-                               content=tool_args, 
-                               success=False, 
-                               error_message="argument missing", 
-                               error=ToolError(code=ToolErrorCode.TOOL_ARGUMENT_MISSING, category=PlatErrorCategory.USER_FIXABLE,message="argment missing"))
-        
-        input_args = {}
-        for field in tool_obj.get_spec().required_fields:
-            input_args[field] = tool_args[field]
-        return tool_obj.execute(tool_args=input_args)
-    else:
-        return ToolResult(tool_name=tool_name, content=tool_args, success=False, error_message="unknow tool", error=ToolError(code=ToolErrorCode.UNKNOWN_TOOL_ERROR, category=PlatErrorCategory.FATAL,message="unknown tool"))
 # #用来恢复现场
 # def resume_from_context(state:AgentState, processed_field:dict)->dict:
 #     resume_action = {}
@@ -179,33 +134,33 @@ def classify_multi_file_error(tool_result: ToolResult):
 
 
 #消费待处理文件
-def _run_multi_file_step(history, state:AgentState):
-    if len(state.pending_files)==0:
-        return ToolResult("","",True, ""), history, state
-    else:     
-        state.current_file = state.pending_files[0]
-        add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
-                                                     message=f"orchestrator正在消费文件:{state.current_file}",
-                                                     workflow_type=state.workflow_type,
-                                                     source="orchestrator",
-                                                     session_id=state.session_id,
-                                                     event_type="queue_consume"))
-        tool_result = read_file(state.current_file)
-        if tool_result.success:
-            state.collected_contents[state.current_file]=tool_result.content
-            state.pending_files.pop(0)
-            state.completed_files.append(state.current_file)
-            state.last_tool_name = "read_file"
-            state.last_tool_result = tool_result
-            state.current_file_retry_count = 0
-            add_tool_result(history, "read_file", tool_result.content, tool_result.success)
+# def _run_multi_file_step(history, state:AgentState):
+#     if len(state.pending_files)==0:
+#         return ToolResult("","",True, ""), history, state
+#     else:     
+#         state.current_file = state.pending_files[0]
+#         add_trace(state.trace_events, TraceEvent(turn_id=state.turn_id, 
+#                                                      message=f"orchestrator正在消费文件:{state.current_file}",
+#                                                      workflow_type=state.workflow_type,
+#                                                      source="orchestrator",
+#                                                      session_id=state.session_id,
+#                                                      event_type="queue_consume"))
+#         tool_result = read_file(state.current_file)
+#         if tool_result.success:
+#             state.collected_contents[state.current_file]=tool_result.content
+#             state.pending_files.pop(0)
+#             state.completed_files.append(state.current_file)
+#             state.last_tool_name = "read_file"
+#             state.last_tool_result = tool_result
+#             state.current_file_retry_count = 0
+#             add_tool_result(history, "read_file", tool_result.content, tool_result.success)
             
-        else:
-            state.last_tool_name = "read_file"
-            state.last_tool_result = tool_result
-            # state.resume_context=build_resume_context(state=state, resume_kind="workflow_repair", missing_info="file_name",failed_target=state.current_file)
-            add_tool_result(history, "read_file", tool_result.error_message, tool_result.success)
-    return tool_result, history, state
+#         else:
+#             state.last_tool_name = "read_file"
+#             state.last_tool_result = tool_result
+#             # state.resume_context=build_resume_context(state=state, resume_kind="workflow_repair", missing_info="file_name",failed_target=state.current_file)
+#             add_tool_result(history, "read_file", tool_result.error_message, tool_result.success)
+#     return tool_result, history, state
 
 
 
@@ -250,8 +205,8 @@ def run_turn(user_input, history, state: AgentState):
         decision = decide_next_step(state=state, user_input=user_input, history=history)
         print(f"[ORCH] loop={state.loop_count}, next_action={decision.next_action}, tool_name={decision.tool_name}")
         if decision.record_message == True:
-            add_message(history, "DECISIONLAYER", decision.assistant_message)
-        
+            add_message(history, "assistant", decision.assistant_message)
+
         if decision.next_action == "call_tool":
             tool_result = call_execute(decision.tool_name, decision.tool_args)
 
@@ -263,11 +218,18 @@ def run_turn(user_input, history, state: AgentState):
                 return f"工具失败: {tool_result.error_message}", history, state
 
             user_input = ""
+            state.loop_count+=1
             continue
         if decision.next_action in ("respond", "finish"):
             # respond: 普通回复，用户可能继续对话
             # finish: 任务结束，本轮对话终结
             # 当前行为相同，后续可按需拆分
+            state.loop_count = 0
+            return decision.assistant_message, history, state
+        if decision.next_action == "ask_user":
+            #如果按照这样的恢复
+            state.waiting_for_user = True
+            
             return decision.assistant_message, history, state
         
 

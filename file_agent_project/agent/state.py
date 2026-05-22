@@ -11,7 +11,7 @@ def set_default_state_workflow(state:AgentState):
     state.missing_info = ""
     state.resume_context = None
     state.completed_files = []
-    state.retry_count = 0
+    
     return state
 
 def create_initial_state():
@@ -22,23 +22,21 @@ def create_initial_state():
         error_message="",
     )
     return AgentState(
-        current_intent="",
-        current_file="",
-        missing_info="",
-        waiting_for_user=False,
+        session_id="",
+        turn_id=0,
         loop_count=0,
-        retry_count=0,
-        last_tool_name="",
-        last_tool_result=empty_result,
+        error_count=0,
+        waiting_for_user=False,
+        missing_info="",
+        resume_context=None,
+
+        workflow_type="idle",
+        current_file="",
         pending_files=[],
         completed_files=[],
-        collected_contents={},
-        workflow_type="idle",
-        resume_context=None,
-        turn_id=0,
-        session_id="",
-        trace_events=[],
-        current_file_retry_count=0
+        collected_contents=dict(),
+        last_tool_result=ToolResult,
+        trace_events=[]
     )
 
 
