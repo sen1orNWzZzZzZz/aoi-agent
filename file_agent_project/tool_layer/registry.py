@@ -1,32 +1,32 @@
 import inspect
-from typing import Dict, get_type_hints
+from typing import Dict, List, get_type_hints
 
-from tool_layer.base import BaseTool, ToolSpec
+from tool_layer.base import BaseTool, ToolSpec, ToolResult
 
 
 
 class ToolRegistry:
     def __init__(self):
-        # 核心存储：名字 -> {"实例": obj, "注解": spec}
+        #核心存储：工具的名字->{"实例": obj, "注解": spec}
         self._tools: Dict[str, dict] = {}
     
     def register(self, name: str, instance):
         """注册时自动解析类型注解和文档"""
         spec = self._parse_annotations(instance)
         self._tools[name] = {
-            "instance": instance,   # 真正的工具实例
-            "spec": spec,           # 解析出的「注解信息」
-            "class": instance.__class__
+            "instance": instance,   #真正的工具实例
+            "spec": spec,           #解析出的「注解信息」
+            "class": instance.__class__  ##
         }
     
     def _parse_annotations(self, instance) -> ToolSpec:
         """自动从类的方法中提取类型注解"""
-        # 1. 拿 execute_tool 方法的签名
-        execute_method = getattr(instance, 'execute_tool', None)
+        #拿 execute_tool 方法的签名
+        execute_method = getattr(instance, 'execute_tool', None)  #获取execute_tool
         if not execute_method:
             return ToolSpec(name="unknown", description="", params={})
         
-        # 2. 提取类型注解
+        #提取类型注解
         sig = inspect.signature(execute_method)
         type_hints = get_type_hints(execute_method)
         params = {}
@@ -39,11 +39,11 @@ class ToolRegistry:
                 "default": None if param.default is inspect.Parameter.empty else param.default
             }
         
-        # 3. 提取文档和返回类型
+        #提取文档和返回类型
         doc = inspect.getdoc(execute_method) or ""
         return_type = str(type_hints.get('return', 'any'))
         
-        # 4. 尝试从 get_spec 拿描述（如果用户实现了）
+        #尝试从get_spec
         try:
             user_spec = instance.get_spec()
             name = getattr(user_spec, 'name', 'unknown')
@@ -56,7 +56,19 @@ class ToolRegistry:
 
 
     def execute(self, tool_name, tool_args):
-        pass
+      entry = self._tools.get(tool_name)
+      if not entry:
+          return ToolResult(success=False, error_message=f"找不到工具: {tool_name}")
+
+      instance = entry["instance"]
+
+      #先校验参数（基类自带的validate_args）
+      valid, err_msg = instance.validate_args(tool_args)
+      if not valid:
+          return ToolResult(success=False, error_message=err_msg)
+
+      #用**展开字典调用
+      return instance.execute_tool(**tool_args)
 
     def get_tool(self, tool_name):
         entry = self._tools.get(tool_name)
@@ -65,8 +77,8 @@ class ToolRegistry:
     def get_all_tools(self):
         pass
 
-    def get_all_spec(self):
-        """拿出所有注解（给 LLM 用）"""
+    def get_all_spec(self)->List[ToolSpec]:
+        """拿出所有注解（给LLM用）"""
         return [t["spec"] for t in self._tools.values()]
 
 registry = ToolRegistry()

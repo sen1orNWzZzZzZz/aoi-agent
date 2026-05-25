@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 @dataclass
 class ToolSpec:
     name: str
-    require_fields: List[str]
+    # require_fields: List[str]
     description: str
-    optional_fields: List[str] | None
+    params: dict = field(default_factory=dict)       
+    returns: str = "any" 
+    # optional_fields: List[str] | None = None
 
     def post_init(self):
         if self.optional_fields is None:
@@ -22,7 +24,7 @@ class ToolSpec:
 @dataclass
 class ToolResult:
     success: bool
-    content: any
+    content: any | None = None
     error_message: str | None = None
 
 class BaseTool(ABC):
@@ -31,13 +33,9 @@ class BaseTool(ABC):
         pass
 
     @abstractmethod
-    def execute_tool(self, tool_args:Dict[str, any])->ToolResult:
+    def execute_tool(self, **kwargs)->ToolResult:
         pass
 
+    @abstractmethod
     def validate_args(self, tool_args:Dict[str,any])->tuple[bool, Optional[str]]:
-        spec = self.get_spec()
-        missing = [f for f in spec.require_fields if f not in tool_args]
-        if missing:
-            return False, f"缺少必填字段：{','.join(missing)}"
-        else:
-            return True, None
+        pass

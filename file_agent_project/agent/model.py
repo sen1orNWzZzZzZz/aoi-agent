@@ -56,21 +56,16 @@ def get_model_action(user_input, history, state):
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    specs = registry.get_all_spec()   # ← 用实例调用
+    specs = registry.get_all_spec()   #用实例调用
     
-    #工具启动并且开始格式化成 LLM 能看懂的文本
-    tools_desc = []
-    for spec in specs:
-        tools_desc.append(
-            f"工具名：{spec.name}\n"
-            f"描述：{spec.description}\n"
-            f"参数：{spec.params}\n"
-            f"返回：{spec.returns}"
-        )
+    #工具启动并且开始格式化成WLLM能看懂的文本
+    tools_desc = ["你现在有如下工具可供使用："]
+    for idx, spec in enumerate(specs, 1):
+        tools_desc.append(f"{idx}:工具名 {spec.name}，描述 {spec.description}, 参数项 {spec.params}, 返回项 {spec.returns}")
     
     tools_text = "\n---\n".join(tools_desc)
 
-    messages.append({"role":"system","content":"你有如下工具可供使用："+tools_text})
+    messages.append({"role":"system","content":tools_text})
     messages.extend(to_model_messages(get_recent_memory(history, limit=6)))
     messages.append({"role": "user", "content": current_input})
     

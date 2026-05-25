@@ -1,15 +1,11 @@
 ﻿from agent.memory import add_message, add_tool_result
 from agent.model import get_model_action
 from core.constants import MAX_LOOP
-from core.schemas import AgentState, ToolResult,Action,ResumeContext,ToolError
-from tool_layer.errors import PlatErrorCategory, ToolErrorCode
-from agent.trace import TraceEvent,add_trace
-from agent.state import set_default_state_workflow
-from recovery.recovery_decision import create_recovery_decision,RecoveryAction
-from common.dict.dict_consumer import get_nested_value,set_nested_value
-from tool_layer.specs import ToolSpec, FieldIssue
+from core.schemas import AgentState,Action,ResumeContext
 from agent.decision import decide_next_step
 from execute.execute_layer import call_execute
+from tool_layer.base import ToolResult, BaseTool
+from tool_layer.registry import registry
 
 
 #消费工具调用结果
@@ -208,8 +204,8 @@ def run_turn(user_input, history, state: AgentState):
             add_message(history, "assistant", decision.assistant_message)
 
         if decision.next_action == "call_tool":
-            tool_result = call_execute(decision.tool_name, decision.tool_args)
-
+            tool_result = registry.execute(tool_name=decision.tool_name, tool_args=decision.tool_args)
+            print(f"工具执行结果是:{tool_result}")
             # 无论成功失败，都记录到 history
             observation = tool_result.content if tool_result.success else tool_result.error_message
             add_tool_result(history, decision.tool_name, observation, tool_result.success)

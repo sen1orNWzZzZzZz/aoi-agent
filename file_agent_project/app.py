@@ -5,6 +5,7 @@ from core.constants import WORKSPACE_ROOT
 from agent.trace import append_trace_log
 import uuid
 from pathlib import Path
+from tool_layer.tools import helloworld_tool 
 
 
 def main():

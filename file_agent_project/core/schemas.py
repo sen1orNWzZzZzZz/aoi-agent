@@ -1,14 +1,6 @@
 ﻿from dataclasses import dataclass, field
 from agent.trace import TraceEvent
-from tool_layer.errors import ToolError
-
-@dataclass
-class ToolResult:
-    tool_name: str
-    content: str
-    success: bool
-    error_message: str
-    error: ToolError | None = None
+from tool_layer.base import ToolResult
 
 @dataclass
 class ResumeDecision:#恢复判定字段

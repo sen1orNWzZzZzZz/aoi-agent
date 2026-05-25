@@ -1,5 +1,6 @@
 ﻿from core.schemas import AgentState
-from core.schemas import ToolResult, ResumeContext
+from core.schemas import  ResumeContext
+from tool_layer.base import ToolResult
 
 def set_default_state_workflow(state:AgentState):
     state.pending_files=[]
@@ -16,7 +17,6 @@ def set_default_state_workflow(state:AgentState):
 
 def create_initial_state():
     empty_result = ToolResult(
-        tool_name="",
         content="",
         success=False,
         error_message="",
@@ -35,7 +35,7 @@ def create_initial_state():
         pending_files=[],
         completed_files=[],
         collected_contents=dict(),
-        last_tool_result=ToolResult,
+        last_tool_result=ToolResult(success=True,content="", error_message=None),
         trace_events=[]
     )
 
