@@ -54,3 +54,4 @@ htmlcov/
 
 # Kimi skills
 .kimi/
+.claude/
