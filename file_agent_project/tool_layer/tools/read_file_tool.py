@@ -1,4 +1,6 @@
-from tool_layer.base import ToolResult, BaseTool, ToolSpec, ToolResult
+import os
+
+from tool_layer.base import ToolResult, BaseTool, ToolSpec, ToolResult, ValidationResult
 from tool_layer.decorator import register_tool
 
 @register_tool("read_file")
@@ -23,14 +25,15 @@ class ReadFileTool(BaseTool):
                 with open(file_name, 'r', encoding='utf-8') as f:
                     return ToolResult(success=True, content=f.read())
             except FileNotFoundError:
-                return f"错误：文件 '{file_name}' 不存在"
+                return ToolResult(success=False, error_message="文件未找到")
             except Exception as e:
-                return f"读取出错：{e}"
+                return ToolResult(success=False, error_message=str(e))
         else:
             return ToolResult(success=False, content="", error_message="工具发生错误")
 
-    def validate_args(self, file_name) -> tuple[bool, str | None]:
-        if file_name is None or file_name=="":
-            return False
+    def validate_business(self, **kwargs) -> ValidationResult:
+        current_file = kwargs.get("file_name")
+        if os.path.exists(current_file):
+            return ValidationResult(validate=True)
         else:
-            return True
+            return ValidationResult(validate=False, error="文件不存在")

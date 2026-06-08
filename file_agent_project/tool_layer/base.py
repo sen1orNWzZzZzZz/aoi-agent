@@ -24,18 +24,59 @@ class ToolSpec:
 @dataclass
 class ToolResult:
     success: bool
+    tool_name: str
     content: any | None = None
     error_message: str | None = None
+    tool_args: dict | None = None
+    
+@dataclass
+class ValidationResult:
+    validate: bool
+    error: str | None = None
+
 
 class BaseTool(ABC):
-    @abstractmethod
-    def get_spec(self)->ToolSpec:
-        pass
 
-    @abstractmethod
-    def execute_tool(self, **kwargs)->ToolResult:
-        pass
+      @abstractmethod
+      def get_spec(self) -> ToolSpec:
+          pass
 
-    @abstractmethod
-    def validate_args(self, tool_args:Dict[str,any])->tuple[bool, Optional[str]]:
-        pass
+      @abstractmethod
+      def execute_tool(self, **kwargs) -> ToolResult:
+          pass
+
+      # === 自动基础校验（注册中心会调这个） ===
+      def validate_args(self, **kwargs) -> ValidationResult:
+          """
+          默认实现：根据 ToolSpec 自动检查必填字段和基础类型。
+          子类可以 override，也可以 super() 调用后再加自己的业务校验。
+          """
+          spec = self.get_spec()
+          errors = []
+
+          # 1. 检查必填
+          for name, meta in spec.params.items():
+              if meta.get("required") and kwargs.get(name) in (None, ""):
+                  errors.append(f"参数 '{name}' 为必填项")
+
+          # 2. 基础类型检查
+          for name, meta in spec.params.items():
+              expected_type = meta.get("type")
+              value = kwargs.get(name)
+              if value is not None and expected_type == "string" and not isinstance(value, str):
+                  errors.append(f"参数 '{name}' 必须是字符串")
+
+          if errors:
+              return ValidationResult(valid=False, error="; ".join(errors))
+
+          return ValidationResult(valid=True)
+
+      # === 业务校验钩子（推荐子类 override 这个而不是 validate_args） ===
+      def validate_business(self, **kwargs) -> ValidationResult:
+        
+        #   子类只写业务层校验，比如：
+        #   路径是否存在
+        #   文件大小是否超限
+        #   数值范围是否合理
+          
+          return ValidationResult(valid=True)

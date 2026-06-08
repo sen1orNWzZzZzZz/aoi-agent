@@ -187,6 +187,12 @@ def _build_tool_error(tool_name: str, message: str) -> ToolResult:
 
 
 
+def _consume_tool_result(tool_result:ToolResult):
+    if tool_result.success is not True:
+        if "timeout" in tool_result.error_message:
+            return "retryable"
+
+
 
 def run_turn(user_input, history, state: AgentState):
     
@@ -211,7 +217,9 @@ def run_turn(user_input, history, state: AgentState):
             add_tool_result(history, decision.tool_name, observation, tool_result.success)
 
             if not tool_result.success:
-                return f"工具失败: {tool_result.error_message}", history, state
+                #TODO:根据失败的结果进行处理：询问？重试？
+                
+                #return f"工具失败: {tool_result.error_message}", history, state
 
             user_input = ""
             state.loop_count+=1
