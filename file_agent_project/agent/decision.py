@@ -20,8 +20,15 @@ def decide_next_step(
     history: list[dict]
 ) -> Decision:
     if state.waiting_for_user is True:
-        
-        pass#执行恢复操作
+        #将用户输入追加到工具重试中
+        resume_tool_args=state.resume_context.pending_action["tool_args"]
+        resume_tool_args[state.resume_context.missing_info]=user_input
+        #执行恢复操作
+        return Decision(next_action="resume",
+                        tool_name=state.resume_context.pending_action["tool_name"],
+                        tool_args=resume_tool_args,
+                        record_message=False,
+                        )
     action = get_model_action(user_input=user_input, state=state,history=history)
     ret = Decision(next_action=action.action_type)
     if action.tool_name is not None:

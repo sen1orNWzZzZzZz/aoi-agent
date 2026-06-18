@@ -7,6 +7,8 @@ from agent.prompt import SYSTEM_PROMPT
 from core.constants import api_key, base_url, model
 from core.schemas import Action
 from tool_layer.registry import registry
+import logging
+logger = logging.getLogger(__name__)
 
 def to_model_messages(memory):
     messages = []
@@ -68,8 +70,8 @@ def get_model_action(user_input, history, state):
     messages.append({"role":"system","content":tools_text})
     messages.extend(to_model_messages(get_recent_memory(history, limit=6)))
     messages.append({"role": "user", "content": current_input})
-    
-    print(messages)
+    #调试用
+    logger.info(messages)
 
     try:
         response = client.chat.completions.create(

@@ -6,10 +6,10 @@ def register_tool(name: str):
     def decorator(cls):         # 检查是不是 BaseTool 的子类 
         if not issubclass(cls, BaseTool):
             raise TypeError(f"{cls.__name__} 必须继承 BaseTool")
-# 实例化 + 注册         
+#实例化 + 注册         
         instance = cls()         
         registry.register(name, instance)
-# 返回原类，不改它         
+#返回原类，不改它         
         return cls
     return decorator
 

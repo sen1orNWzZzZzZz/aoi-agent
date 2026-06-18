@@ -6,6 +6,8 @@ from agent.decision import decide_next_step
 from execute.execute_layer import call_execute
 from tool_layer.base import ToolResult, BaseTool
 from tool_layer.registry import registry
+from recovery.classify_error import classify_error
+from recovery.build_recovery import save_recovery_info
 
 
 #消费工具调用结果
@@ -51,17 +53,17 @@ def consume_tool_result(tool_result:ToolResult)->str:
 #         raise ValueError("consume tool result error")
 
 
-def save_recovery_info(state, tool_name, resume_kind, recovery_decision):
-      state.waiting_for_user = True
-      state.missing_info = recovery_decision.missing_info
-      state.resume_context = build_resume_context(
-          state=state,
-          resume_kind=resume_kind,
-          missing_info=recovery_decision.missing_info,
-          pending_action=get_tool_action_template(tool_name),
-          resume_patch=recovery_decision.resume_patch
-      )
-      return state, recovery_decision.user_message
+# def save_recovery_info(state, tool_name, resume_kind, recovery_decision):
+    #   state.waiting_for_user = True
+    #   state.missing_info = recovery_decision.missing_info
+    #   state.resume_context = build_resume_context(
+    #       state=state,
+    #       resume_kind=resume_kind,
+    #       missing_info=recovery_decision.missing_info,
+    #       pending_action=get_tool_action_template(tool_name),
+    #       resume_patch=recovery_decision.resume_patch
+    #   )
+    #   return state, recovery_decision.user_message
 
 # #用来恢复现场
 # def resume_from_context(state:AgentState, processed_field:dict)->dict:
@@ -78,11 +80,11 @@ def save_recovery_info(state, tool_name, resume_kind, recovery_decision):
 
 
 #工具现场恢复函数，后续改成工具注册中心，提供工具相关信息
-def get_tool_action_template(tool_name: str) -> dict:
-    if(tool_name=="read_file"):
-        return {"tool_name":"read_file","tool_args":{"file_name": ""}}
-    elif(tool_name=="list_files"):
-        return {"tool_name":"list_files","tool_args":{"target_dir":""}}
+# def get_tool_action_template(tool_name: str) -> dict:
+#     if(tool_name=="read_file"):
+#         return {"tool_name":"read_file","tool_args":{"file_name": ""}}
+#     elif(tool_name=="list_files"):
+#         return {"tool_name":"list_files","tool_args":{"target_dir":""}}
 
 #统一将action中的状态转移到state中
 def action_to_state(state:AgentState, action:Action):
@@ -192,6 +194,12 @@ def _consume_tool_result(tool_result:ToolResult):
         if "timeout" in tool_result.error_message:
             return "retryable"
 
+def infer_missing_field(tool_name: str) -> str:#说实话有点权宜之计，真正的系统感觉得让llm来判断
+    field_map = {
+        "read_file": "file_name",
+        "list_files_tool": "target_dir",
+    }
+    return field_map.get(tool_name, "input")
 
 
 def run_turn(user_input, history, state: AgentState):
@@ -202,23 +210,52 @@ def run_turn(user_input, history, state: AgentState):
 
     while state.loop_count<MAX_LOOP:
 
-
         #decisionLayer根据用户输入做决定
         decision = decide_next_step(state=state, user_input=user_input, history=history)
         print(f"[ORCH] loop={state.loop_count}, next_action={decision.next_action}, tool_name={decision.tool_name}")
         if decision.record_message == True:
             add_message(history, "assistant", decision.assistant_message)
-
+        if decision.next_action == "resume":
+            resume_tool_result = registry.execute(decision.tool_name,decision.tool_args)
+            resume_observation = resume_tool_result.content if resume_tool_result.success else resume_tool_result.error_message
+            add_tool_result(history, decision.tool_name, resume_observation, tool_result.success)
+            if resume_tool_result.success:
+                #清理恢复状态
+                state.waiting_for_user = False
+                state.resume_context = None
+                state.missing_info = ""
+                user_input = ""
+                state.loop_count += 1
+                continue
+            else:
+                return "重试失败，请尝试重新对话", history, state
+                
         if decision.next_action == "call_tool":
-            tool_result = registry.execute(tool_name=decision.tool_name, tool_args=decision.tool_args)
-            print(f"工具执行结果是:{tool_result}")
+            for attempt in range(3):  #单个工具最多试 3 次
+                tool_result = registry.execute(decision.tool_name, decision.tool_args)
+
+                if tool_result.success:
+                    break  #成功，跳出重试循环
+                error_type = classify_error(tool_result)
+
+                if error_type == "retryable" and attempt < 2:
+                    continue  #重试
+                else:#隔离不是retryable的情况
+                    break
             # 无论成功失败，都记录到 history
             observation = tool_result.content if tool_result.success else tool_result.error_message
             add_tool_result(history, decision.tool_name, observation, tool_result.success)
 
             if not tool_result.success:
-                #TODO:根据失败的结果进行处理：询问？重试？
-                
+                error_class = classify_error(tool_result=tool_result)
+                if error_class=="fatal":
+                    return f"工具失败: {tool_result.error_message}", history, state
+                if error_class=="user_fixable":
+                    msfd = infer_missing_field(state.last_tool_result.tool_name)
+                    save_recovery_info(state=state, missing_field=msfd, pending_action={"tool_name":decision.tool_name,"tool_args":decision.tool_args})
+                    return f"请补充文件{msfd},的具体信息", history, state
+                # if error_class=="retryable":
+                #     continue
                 #return f"工具失败: {tool_result.error_message}", history, state
 
             user_input = ""
@@ -235,7 +272,8 @@ def run_turn(user_input, history, state: AgentState):
             state.waiting_for_user = True
             
             return decision.assistant_message, history, state
-        
+    
+    return "超过最大循环次数，将不再继续调用", history, state   
 
 
 

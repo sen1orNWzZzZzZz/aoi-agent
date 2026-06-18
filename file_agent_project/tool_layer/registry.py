@@ -1,7 +1,7 @@
 import inspect
 from typing import Dict, List, get_type_hints
 
-from tool_layer.base import BaseTool, ToolSpec, ToolResult
+from tool_layer.base import BaseTool, ToolSpec, ToolResult, ValidationResult
 
 
 
@@ -43,7 +43,7 @@ class ToolRegistry:
         doc = inspect.getdoc(execute_method) or ""
         return_type = str(type_hints.get('return', 'any'))
         
-        #尝试从get_spec
+        #尝试get_spec
         try:
             user_spec = instance.get_spec()
             name = getattr(user_spec, 'name', 'unknown')
@@ -56,26 +56,38 @@ class ToolRegistry:
 
 
     def execute(self, tool_name, tool_args):
-      entry = self._tools.get(tool_name)
-      if not entry:
-          return ToolResult(success=False, error_message=f"找不到工具: {tool_name}")
+        entry = self._tools.get(tool_name)
+        if not entry:
+            return ToolResult(success=False, error_message=f"找不到工具: {tool_name}",tool_args=tool_args, tool_name=tool_name)
 
-      instance = entry["instance"]
+        instance = entry["instance"]
 
-      #先校验参数（基类自带的validate_args）
-      valid, err_msg = instance.validate_args(tool_args)
-      if not valid:
-          return ToolResult(success=False, error_message=err_msg)
-
-      #用**展开字典调用
-      return instance.execute_tool(**tool_args)
+        #先校验参数（基类自带的validate_args）
+        vd_res = instance.validate_args(**tool_args)
+        if not vd_res.validate:
+            return ToolResult(success=False, error_message=vd_res.error, tool_name=tool_name, tool_args=tool_args)
+        
+        #校验参数的业务状态，依旧
+        try:
+            vdb_res = instance.validate_business(**tool_args)
+            if vdb_res.validate:
+                return instance.execute_tool(**tool_args)
+            else:
+                return ToolResult(success=False, error_message=vdb_res.error, tool_name=tool_name, tool_args=tool_args)
+        except Exception as e:
+            return ToolResult(success=False, error_message=str(e), tool_name=tool_name, tool_args=tool_args)
+        #用**展开字典调用
+        
 
     def get_tool(self, tool_name):
         entry = self._tools.get(tool_name)
         return entry.get("instance") if entry else None
 
-    def get_all_tools(self):
-        pass
+    def get_all_tools(self)->list:
+        tool_list = []
+        for tool in self._tools:
+            tool_list.append(tool)
+        return tool_list
 
     def get_all_spec(self)->List[ToolSpec]:
         """拿出所有注解（给LLM用）"""

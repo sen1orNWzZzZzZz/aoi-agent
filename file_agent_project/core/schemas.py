@@ -1,5 +1,5 @@
 ﻿from dataclasses import dataclass, field
-from agent.trace import TraceEvent
+from core.trace import TraceEvent
 from tool_layer.base import ToolResult
 
 @dataclass

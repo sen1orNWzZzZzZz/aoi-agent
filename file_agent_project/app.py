@@ -2,11 +2,12 @@
 from agent.state import create_initial_state
 from agent.memory import create_memory
 from core.constants import WORKSPACE_ROOT
-from agent.trace import append_trace_log
+from file_agent_project.core.trace import append_trace_log
 import uuid
 from pathlib import Path
-from tool_layer.tools import helloworld_tool 
-
+from tool_layer import tools
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
     history = create_memory()

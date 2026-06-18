@@ -9,7 +9,7 @@ class ToolSpec:
     description: str
     params: dict = field(default_factory=dict)       
     returns: str = "any" 
-    # optional_fields: List[str] | None = None
+    optional_fields: List[str] | None = None
 
     def post_init(self):
         if self.optional_fields is None:
@@ -45,7 +45,7 @@ class BaseTool(ABC):
       def execute_tool(self, **kwargs) -> ToolResult:
           pass
 
-      # === 自动基础校验（注册中心会调这个） ===
+      #自动基础校验
       def validate_args(self, **kwargs) -> ValidationResult:
           """
           默认实现：根据 ToolSpec 自动检查必填字段和基础类型。
@@ -67,11 +67,11 @@ class BaseTool(ABC):
                   errors.append(f"参数 '{name}' 必须是字符串")
 
           if errors:
-              return ValidationResult(valid=False, error="; ".join(errors))
+              return ValidationResult(validate=False, error="; ".join(errors))
 
-          return ValidationResult(valid=True)
+          return ValidationResult(validate=True)
 
-      # === 业务校验钩子（推荐子类 override 这个而不是 validate_args） ===
+      #业务校验
       def validate_business(self, **kwargs) -> ValidationResult:
         
         #   子类只写业务层校验，比如：
@@ -79,4 +79,4 @@ class BaseTool(ABC):
         #   文件大小是否超限
         #   数值范围是否合理
           
-          return ValidationResult(valid=True)
+          return ValidationResult(validate=True)

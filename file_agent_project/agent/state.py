@@ -16,11 +16,6 @@ def set_default_state_workflow(state:AgentState):
     return state
 
 def create_initial_state():
-    empty_result = ToolResult(
-        content="",
-        success=False,
-        error_message="",
-    )
     return AgentState(
         session_id="",
         turn_id=0,
@@ -35,7 +30,7 @@ def create_initial_state():
         pending_files=[],
         completed_files=[],
         collected_contents=dict(),
-        last_tool_result=ToolResult(success=True,content="", error_message=None),
+        last_tool_result=ToolResult(success=True,content="", error_message=None,tool_name=""),
         trace_events=[]
     )
 
